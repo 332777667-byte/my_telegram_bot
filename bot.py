@@ -2,9 +2,8 @@ import logging
 import os
 import random
 import time
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -20,8 +19,7 @@ logging.basicConfig(
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 if not TOKEN:
     logging.error("未设置TELEGRAM_BOT_TOKEN环境变量")
-    # 可以设置一个默认值用于本地测试，但生产环境必须使用环境变量
-    # TOKEN = "你的默认token"
+    exit(1)
 
 # 本地图片文件名 - 确保这些图片文件放在与bot.py相同的文件夹中
 LOCAL_IMAGE_PATH = "welcome.jpg"  # 欢迎图片
@@ -220,7 +218,7 @@ def get_contact_service_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 # /start 命令的处理函数 - 发送带本地图片和按钮的消息
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start_command(update: Update, context: CallbackContext):
     # 更新后的消息文本，与图片内容一致
     caption = """项目操作流程
 - ①火币交易所注册
@@ -239,16 +237,16 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 检查图片文件是否存在
         if not os.path.exists(LOCAL_IMAGE_PATH):
             # 如果图片不存在，只发送文字和按钮
-            await update.message.reply_text(
+            update.message.reply_text(
                 text=caption,
                 reply_markup=get_main_menu_keyboard()
             )
             # 同时发送提示信息
-            await update.message.reply_text("⚠️ 欢迎图片未找到，请确保welcome.jpg文件存在于机器人目录中")
+            update.message.reply_text("⚠️ 欢迎图片未找到，请确保welcome.jpg文件存在于机器人目录中")
         else:
             # 发送本地图片消息，附带文字和按钮
             with open(LOCAL_IMAGE_PATH, 'rb') as photo:
-                await context.bot.send_photo(
+                context.bot.send_photo(
                     chat_id=update.effective_chat.id,
                     photo=photo,
                     caption=caption,
@@ -256,7 +254,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
         
         # 发送功能键盘提示消息
-        await update.message.reply_text(
+        update.message.reply_text(
             "菜单 - 下方是功能键盘！",
             reply_markup=get_reply_keyboard()
         )
@@ -264,17 +262,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         # 如果发送图片失败，发送错误信息
         logging.error(f"发送图片时出错: {e}")
-        await update.message.reply_text(
+        update.message.reply_text(
             text="发送欢迎图片时出错，但机器人功能正常。\n\n" + caption,
             reply_markup=get_main_menu_keyboard()
         )
-        await update.message.reply_text(
+        update.message.reply_text(
             "菜单 - 下方是功能键盘！",
             reply_markup=get_reply_keyboard()
         )
 
 # 处理回复键盘按钮点击
-async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_reply_buttons(update: Update, context: CallbackContext):
     text = update.message.text
     user = update.message.from_user
     
@@ -296,16 +294,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查余额充值图片是否存在
             if not os.path.exists(RECHARGE_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=recharge_text,
                     reply_markup=get_recharge_amount_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 余额充值说明图片未找到，请确保recharge_guide.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 余额充值说明图片未找到，请确保recharge_guide.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(RECHARGE_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=recharge_text,
@@ -315,7 +313,7 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送余额充值图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送余额充值说明图片时出错。\n\n" + recharge_text,
                 reply_markup=get_recharge_amount_keyboard()
             )
@@ -335,16 +333,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查购买卡密图片是否存在
             if not os.path.exists(BUY_CARD_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=buy_card_text,
                     reply_markup=get_buy_card_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 购买卡密图片未找到，请确保buy_card.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 购买卡密图片未找到，请确保buy_card.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(BUY_CARD_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=buy_card_text,
@@ -354,7 +352,7 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送购买卡密图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送购买卡密图片时出错。\n\n" + buy_card_text,
                 reply_markup=get_buy_card_keyboard()
             )
@@ -367,16 +365,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查提取卡密图片是否存在
             if not os.path.exists(EXTRACT_CARD_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=extract_card_text,
                     reply_markup=get_extract_card_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 提取卡密图片未找到，请确保extract_card.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 提取卡密图片未找到，请确保extract_card.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(EXTRACT_CARD_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=extract_card_text,
@@ -386,7 +384,7 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送提取卡密图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送提取卡密图片时出错。\n\n" + extract_card_text,
                 reply_markup=get_extract_card_keyboard()
             )
@@ -399,16 +397,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查教程中心图片是否存在
             if not os.path.exists(TUTORIAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=tutorial_text,
                     reply_markup=get_tutorial_center_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 教程中心图片未找到，请确保tutorial_center.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 教程中心图片未找到，请确保tutorial_center.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(TUTORIAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=tutorial_text,
@@ -418,7 +416,7 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送教程中心图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送教程中心图片时出错。\n\n" + tutorial_text,
                 reply_markup=get_tutorial_center_keyboard()
             )
@@ -436,16 +434,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查联系客服图片是否存在
             if not os.path.exists(CONTACT_SERVICE_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=contact_service_text,
                     reply_markup=get_contact_service_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 联系客服图片未找到，请确保contact_service.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 联系客服图片未找到，请确保contact_service.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(CONTACT_SERVICE_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=contact_service_text,
@@ -455,7 +453,7 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送联系客服图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送联系客服图片时出错。\n\n" + contact_service_text,
                 reply_markup=get_contact_service_keyboard()
             )
@@ -475,16 +473,16 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
             # 检查个人中心图片是否存在
             if not os.path.exists(PERSONAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await update.message.reply_text(
+                update.message.reply_text(
                     text=personal_center_text,
                     reply_markup=get_personal_center_keyboard()
                 )
                 # 同时发送提示信息
-                await update.message.reply_text("⚠️ 个人中心图片未找到，请确保personal_center.jpg文件存在于机器人目录中")
+                update.message.reply_text("⚠️ 个人中心图片未找到，请确保personal_center.jpg文件存在于机器人目录中")
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(PERSONAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=update.effective_chat.id,
                         photo=photo,
                         caption=personal_center_text,
@@ -494,27 +492,27 @@ async def handle_reply_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送个人中心图片时出错: {e}")
-            await update.message.reply_text(
+            update.message.reply_text(
                 text="发送个人中心图片时出错。\n\n" + personal_center_text,
                 reply_markup=get_personal_center_keyboard()
             )
     
     elif text == "返回主菜单":
-        await update.message.reply_text(
+        update.message.reply_text(
             "返回主菜单",
             reply_markup=get_reply_keyboard()
         )
     
     else:
-        await update.message.reply_text(
+        update.message.reply_text(
             f"您点击了: {text}\n如需返回主菜单，请点击'返回主菜单'",
             reply_markup=get_reply_keyboard()
         )
 
 # 处理内联按钮回调
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def button_callback(update: Update, context: CallbackContext):
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     # 处理教程图片按钮
     if query.data == "tutorial_image":
@@ -525,26 +523,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查教程中心图片是否存在
             if not os.path.exists(TUTORIAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=tutorial_text,
                     reply_markup=get_tutorial_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(TUTORIAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=tutorial_text,
                         reply_markup=get_tutorial_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送教程中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送教程中心图片时出错。\n\n" + tutorial_text,
                 reply_markup=get_tutorial_center_keyboard()
             )
@@ -581,26 +579,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # 检查充值详情图片是否存在
                 if not os.path.exists(RECHARGE_DETAIL_IMAGE_PATH):
                     # 如果图片不存在，只发送文字
-                    await query.edit_message_caption(
+                    query.edit_message_caption(
                         caption=detail_text,
                         reply_markup=get_recharge_confirm_keyboard(amount)
                     )
                 else:
                     # 发送充值详情图片消息，附带文字
                     with open(RECHARGE_DETAIL_IMAGE_PATH, 'rb') as photo:
-                        await context.bot.send_photo(
+                        context.bot.send_photo(
                             chat_id=query.message.chat_id,
                             photo=photo,
                             caption=detail_text,
                             reply_markup=get_recharge_confirm_keyboard(amount)
                         )
                     # 删除原来的消息
-                    await query.message.delete()
+                    query.message.delete()
                     
             except Exception as e:
                 # 如果发送图片失败，发送错误信息
                 logging.error(f"发送充值详情图片时出错: {e}")
-                await query.edit_message_text(
+                query.edit_message_text(
                     text="发送充值详情图片时出错。\n\n" + detail_text,
                     reply_markup=get_recharge_confirm_keyboard(amount)
                 )
@@ -641,26 +639,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # 检查充值二维码图片是否存在
                 if not os.path.exists(RECHARGE_QR_IMAGE_PATH):
                     # 如果图片不存在，只发送文字
-                    await query.edit_message_text(
+                    query.edit_message_text(
                         text=recharge_page_text,
                         reply_markup=get_recharge_complete_keyboard()
                     )
                 else:
                     # 发送充值二维码图片消息，附带文字
                     with open(RECHARGE_QR_IMAGE_PATH, 'rb') as photo:
-                        await context.bot.send_photo(
+                        context.bot.send_photo(
                             chat_id=query.message.chat_id,
                             photo=photo,
                             caption=recharge_page_text,
                             reply_markup=get_recharge_complete_keyboard()
                         )
                     # 删除原来的消息
-                    await query.message.delete()
+                    query.message.delete()
                     
             except Exception as e:
                 # 如果发送图片失败，发送错误信息
                 logging.error(f"发送充值二维码图片时出错: {e}")
-                await query.edit_message_text(
+                query.edit_message_text(
                     text="发送充值二维码图片时出错。\n\n" + recharge_page_text,
                     reply_markup=get_recharge_complete_keyboard()
                 )
@@ -687,26 +685,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # 检查余额不足图片是否存在
                 if not os.path.exists(INSUFFICIENT_BALANCE_IMAGE_PATH):
                     # 如果图片不存在，只发送文字
-                    await query.edit_message_caption(
+                    query.edit_message_caption(
                         caption=insufficient_balance_text,
                         reply_markup=get_insufficient_balance_keyboard()
                     )
                 else:
                     # 发送余额不足图片消息，附带文字
                     with open(INSUFFICIENT_BALANCE_IMAGE_PATH, 'rb') as photo:
-                        await context.bot.send_photo(
+                        context.bot.send_photo(
                             chat_id=query.message.chat_id,
                             photo=photo,
                             caption=insufficient_balance_text,
                             reply_markup=get_insufficient_balance_keyboard()
                         )
                     # 删除原来的消息
-                    await query.message.delete()
+                    query.message.delete()
                     
             except Exception as e:
                 # 如果发送图片失败，发送错误信息
                 logging.error(f"发送余额不足图片时出错: {e}")
-                await query.edit_message_text(
+                query.edit_message_text(
                     text="发送余额不足图片时出错。\n\n" + insufficient_balance_text,
                     reply_markup=get_insufficient_balance_keyboard()
                 )
@@ -731,41 +729,41 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查余额充值图片是否存在
             if not os.path.exists(RECHARGE_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=recharge_text,
                     reply_markup=get_recharge_amount_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(RECHARGE_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=recharge_text,
                         reply_markup=get_recharge_amount_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送余额充值图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送余额充值说明图片时出错。\n\n" + recharge_text,
                 reply_markup=get_recharge_amount_keyboard()
             )
     
     # 处理关闭充值
     elif query.data == "close_recharge":
-        await query.message.delete()
+        query.message.delete()
     
     # 处理关闭购买卡密
     elif query.data == "close_buy_card":
-        await query.message.delete()
+        query.message.delete()
     
     # 处理关闭提取卡密
     elif query.data == "close_extract_card":
-        await query.message.delete()
+        query.message.delete()
     
     # 处理USDT教程
     elif query.data == "usdt_tutorial":
@@ -790,7 +788,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - 通常在10-30分钟内到账
 - 如有问题请联系客服"""
         
-        await query.edit_message_caption(
+        query.edit_message_caption(
             caption=usdt_tutorial_text,
             reply_markup=get_tutorial_center_keyboard()
         )
@@ -803,26 +801,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查教程中心图片是否存在
             if not os.path.exists(TUTORIAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=tutorial_text,
                     reply_markup=get_tutorial_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(TUTORIAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=tutorial_text,
                         reply_markup=get_tutorial_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送教程中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送教程中心图片时出错。\n\n" + tutorial_text,
                 reply_markup=get_tutorial_center_keyboard()
             )
@@ -843,26 +841,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查个人中心图片是否存在
             if not os.path.exists(PERSONAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=personal_center_text,
                     reply_markup=get_personal_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(PERSONAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=personal_center_text,
                         reply_markup=get_personal_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送个人中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送个人中心图片时出错。\n\n" + personal_center_text,
                 reply_markup=get_personal_center_keyboard()
             )
@@ -883,26 +881,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查个人中心图片是否存在
             if not os.path.exists(PERSONAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=personal_center_text,
                     reply_markup=get_personal_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(PERSONAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=personal_center_text,
                         reply_markup=get_personal_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送个人中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送个人中心图片时出错。\n\n" + personal_center_text,
                 reply_markup=get_personal_center_keyboard()
             )
@@ -923,26 +921,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查个人中心图片是否存在
             if not os.path.exists(PERSONAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=personal_center_text,
                     reply_markup=get_personal_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(PERSONAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=personal_center_text,
                         reply_markup=get_personal_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送个人中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送个人中心图片时出错。\n\n" + personal_center_text,
                 reply_markup=get_personal_center_keyboard()
             )
@@ -963,47 +961,47 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 检查个人中心图片是否存在
             if not os.path.exists(PERSONAL_CENTER_IMAGE_PATH):
                 # 如果图片不存在，只发送文字和按钮
-                await query.edit_message_caption(
+                query.edit_message_caption(
                     caption=personal_center_text,
                     reply_markup=get_personal_center_keyboard()
                 )
             else:
                 # 发送本地图片消息，附带文字和按钮
                 with open(PERSONAL_CENTER_IMAGE_PATH, 'rb') as photo:
-                    await context.bot.send_photo(
+                    context.bot.send_photo(
                         chat_id=query.message.chat_id,
                         photo=photo,
                         caption=personal_center_text,
                         reply_markup=get_personal_center_keyboard()
                     )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
                 
         except Exception as e:
             # 如果发送图片失败，发送错误信息
             logging.error(f"发送个人中心图片时出错: {e}")
-            await query.edit_message_text(
+            query.edit_message_text(
                 text="发送个人中心图片时出错。\n\n" + personal_center_text,
                 reply_markup=get_personal_center_keyboard()
             )
     
     elif query.data == "huobi_tutorial":
         huobi_text = "🏦 火币交易所教程\n\n步骤1：注册火币账户\n- 访问火币官网\n- 点击注册，填写基本信息\n- 完成身份验证\n\n步骤2：购买USDT\n- 登录账户，进入'买币'页面\n- 选择支付方式，输入购买金额\n- 确认交易，获取USDT\n\n步骤3：提现到项目\n- 进入'资产'页面\n- 选择USDT，点击提现\n- 输入项目提供的地址和金额"
-        await query.edit_message_caption(
+        query.edit_message_caption(
             caption=huobi_text,
             reply_markup=get_tutorial_center_keyboard()
         )
     
     elif query.data == "wechat_tutorial":
         wechat_text = "💬 微信核销教程\n\n步骤1：获取卡密\n- 在项目中购买成功后\n- 在'我的订单'中查看卡密\n- 复制卡密信息\n\n步骤2：微信核销\n- 打开微信，扫描核销二维码\n- 粘贴卡密信息\n- 确认核销\n\n步骤3：等待打款\n- 核销成功后\n- 系统会自动处理打款\n- 通常在1-2小时内到账"
-        await query.edit_message_caption(
+        query.edit_message_caption(
             caption=wechat_text,
             reply_markup=get_tutorial_center_keyboard()
         )
     
     elif query.data == "language_pack":
         language_text = "🌐 中文语言包使用教程\n\n1. 下载中文语言包\n   - 点击下方链接下载语言包文件\n   - 解压到指定目录\n\n2. 安装语言包\n   - 打开软件设置\n   - 选择语言选项\n   - 导入中文语言包\n\n3. 重启软件\n   - 关闭并重新打开软件\n   - 界面将显示为中文\n\n如有问题，请联系客服获取最新语言包下载链接。"
-        await query.edit_message_caption(
+        query.edit_message_caption(
             caption=language_text,
             reply_markup=get_tutorial_center_keyboard()
         )
@@ -1029,22 +1027,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 检查图片是否存在
         if os.path.exists(LOCAL_IMAGE_PATH):
             with open(LOCAL_IMAGE_PATH, 'rb') as photo:
-                await query.message.reply_photo(
+                query.message.reply_photo(
                     photo=photo,
                     caption=caption,
                     reply_markup=get_main_menu_keyboard()
                 )
                 # 删除原来的消息
-                await query.message.delete()
+                query.message.delete()
         else:
             # 如果图片不存在，只发送文字
-            await query.edit_message_caption(
+            query.edit_message_caption(
                 caption=caption,
                 reply_markup=get_main_menu_keyboard()
             )
 
 # /chongzhi 命令处理函数
-async def chongzhi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def chongzhi_command(update: Update, context: CallbackContext):
     # 余额充值说明文字
     recharge_text = """# 六部无值
 
@@ -1063,16 +1061,16 @@ async def chongzhi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 检查余额充值图片是否存在
         if not os.path.exists(RECHARGE_IMAGE_PATH):
             # 如果图片不存在，只发送文字和按钮
-            await update.message.reply_text(
+            update.message.reply_text(
                 text=recharge_text,
                 reply_markup=get_recharge_amount_keyboard()
             )
             # 同时发送提示信息
-            await update.message.reply_text("⚠️ 余额充值说明图片未找到，请确保recharge_guide.jpg文件存在于机器人目录中")
+            update.message.reply_text("⚠️ 余额充值说明图片未找到，请确保recharge_guide.jpg文件存在于机器人目录中")
         else:
             # 发送本地图片消息，附带文字和按钮
             with open(RECHARGE_IMAGE_PATH, 'rb') as photo:
-                await context.bot.send_photo(
+                context.bot.send_photo(
                     chat_id=update.effective_chat.id,
                     photo=photo,
                     caption=recharge_text,
@@ -1082,69 +1080,55 @@ async def chongzhi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         # 如果发送图片失败，发送错误信息
         logging.error(f"发送余额充值图片时出错: {e}")
-        await update.message.reply_text(
+        update.message.reply_text(
             text="发送余额充值说明图片时出错。\n\n" + recharge_text,
             reply_markup=get_recharge_amount_keyboard()
         )
 
 # 其他命令
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('发送 /start 查看主菜单', reply_markup=get_reply_keyboard())
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text('发送 /start 查看主菜单', reply_markup=get_reply_keyboard())
 
-async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('这是一个自定义命令！', reply_markup=get_reply_keyboard())
+def custom_command(update: Update, context: CallbackContext):
+    update.message.reply_text('这是一个自定义命令！', reply_markup=get_reply_keyboard())
 
 # 处理普通文本消息
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_message(update: Update, context: CallbackContext):
     # 如果消息不是回复键盘按钮点击，则使用默认处理
     text = update.message.text
     if text not in ["余额充值", "购买卡密", "提取卡密", "教程中心", "联系客服", "个人中心", "返回主菜单"]:
         user = update.message.from_user
         logging.info(f"用户 {user.first_name} (ID: {user.id}) 发送了: {text}")
         response = f'你说了: "{text}"\n发送 /start 查看主菜单'
-        await update.message.reply_text(response, reply_markup=get_reply_keyboard())
+        update.message.reply_text(response, reply_markup=get_reply_keyboard())
 
 # 错误处理
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def error(update: Update, context: CallbackContext):
     logging.warning(f'更新 {update} 导致了错误: {context.error}')
 
-# 主函数 - 修改为异步并添加重试机制
-async def main():
-    application = Application.builder().token(TOKEN).build()
+# 主函数
+def main():
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
     # 添加处理器
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("custom", custom_command))
-    application.add_handler(CommandHandler("chongzhi", chongzhi_command))  # 添加/chongzhi命令
-    application.add_handler(CallbackQueryHandler(button_callback))
+    dp.add_handler(CommandHandler("start", start_command))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("custom", custom_command))
+    dp.add_handler(CommandHandler("chongzhi", chongzhi_command))
+    dp.add_handler(CallbackQueryHandler(button_callback))
     
     # 添加回复键盘按钮处理器
-    application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND, 
+    dp.add_handler(MessageHandler(
+        Filters.text & ~Filters.command, 
         handle_reply_buttons
     ))
     
-    application.add_error_handler(error)
+    dp.add_error_handler(error)
 
     print("机器人正在启动...")
-    
-    # 启动机器人，添加重试机制
-    max_retries = 5
-    retry_delay = 10  # 秒
-    
-    for attempt in range(max_retries):
-        try:
-            await application.run_polling()
-            break
-        except Exception as e:
-            logging.error(f"启动失败 (尝试 {attempt + 1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:
-                logging.info(f"{retry_delay}秒后重试...")
-                await asyncio.sleep(retry_delay)
-            else:
-                logging.error("达到最大重试次数，退出程序")
-                raise
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
